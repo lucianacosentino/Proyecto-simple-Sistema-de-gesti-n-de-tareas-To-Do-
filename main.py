@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 import json
 import os
@@ -11,6 +12,9 @@ class GestorTareas:
         self.root = root
         self.root.title("Gestor de Tareas")
         self.root.geometry("400x400")
+
+        style = ttk.Style()
+        style.theme_use("clam")
 
         self.tareas = self.cargar_tareas()
 
@@ -37,35 +41,53 @@ class GestorTareas:
     # INTERFAZ
     # =========================
     def crear_widgets(self):
-        self.entrada = tk.Entry(self.root, width=40)
-        self.entrada.insert(0, "Escribí tu tarea acá...")
-        self.entrada.pack(pady=10)
 
-        self.entrada.bind("<FocusIn>", self.limpiar_placeholder)
-        self.entrada.bind("<FocusOut>", self.restaurar_placeholder)
+        # Frame superior
+        frame_top = ttk.Frame(self.root)
+        frame_top.pack(pady=10)
 
-        tk.Button(self.root, text="Agregar tarea", command=self.agregar_tarea).pack()
-        tk.Button(self.root, text="Marcar / Desmarcar", command=self.completar_tarea).pack(pady=5)
-        tk.Button(self.root, text="Eliminar tarea", command=self.eliminar_tarea).pack()
+        self.entrada = ttk.Entry(frame_top, width=30)
+        self.entrada.pack(side="left", padx=5)
+        self.entrada.bind("<Return>", lambda event: self.agregar_tarea())
 
-        self.lista = tk.Listbox(self.root, width=50)
+        ttk.Button(frame_top, text="Agregar", command=self.agregar_tarea).pack(side="left")
+
+        # Lista
+        self.lista = tk.Listbox(self.root, width=45, height=10)
         self.lista.pack(pady=10)
-
         self.lista.bind("<Double-Button-1>", lambda event: self.completar_tarea())
+
+        # Frame inferior
+        frame_bottom = ttk.Frame(self.root)
+        frame_bottom.pack(pady=10)
+
+        ttk.Button(frame_bottom, text="Completar", command=self.completar_tarea).pack(side="left", padx=5)
+        ttk.Button(frame_bottom, text="Eliminar", command=self.eliminar_tarea).pack(side="left", padx=5)
+
+        # Contador
+        self.label_contador = ttk.Label(self.root, text="")
+        self.label_contador.pack()
 
     # =========================
     # FUNCIONES
     # =========================
     def actualizar_lista(self):
         self.lista.delete(0, tk.END)
-        for tarea in self.tareas:
+
+        for index, tarea in enumerate(self.tareas):
             estado = "✔" if tarea["completada"] else "✗"
             self.lista.insert(tk.END, f"{estado} {tarea['texto']}")
+
+            if tarea["completada"]:
+                self.lista.itemconfig(index, foreground="gray")
+
+        pendientes = sum(not t["completada"] for t in self.tareas)
+        self.label_contador.config(text=f"Tareas pendientes: {pendientes}")
 
     def agregar_tarea(self):
         texto = self.entrada.get().strip()
 
-        if texto == "" or texto == "Escribí tu tarea acá...":
+        if texto == "":
             messagebox.showwarning("Atención", "Escribí una tarea válida.")
             return
 
@@ -93,7 +115,6 @@ class GestorTareas:
             self.tareas[index]["completada"] = not self.tareas[index]["completada"]
             self.guardar_tareas()
             self.actualizar_lista()
-
         except IndexError:
             messagebox.showwarning("Atención", "Seleccioná una tarea.")
 
