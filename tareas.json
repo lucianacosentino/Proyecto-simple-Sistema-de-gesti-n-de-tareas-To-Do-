@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "texto": "ewe",
+        "completada": true
+    },
+    {
+        "texto": "eew",
+        "completada": false
+    }
+]
