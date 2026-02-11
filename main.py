@@ -1,77 +1,118 @@
-
-#librerías
 import tkinter as tk
 from tkinter import messagebox
 import json
 import os
 
-messagebox.showinfo(
-    "Bienvenido",
-    "Hola 👋\nEste es tu gestor de tareas.\nAgregá una tarea para comenzar."
-)
+ARCHIVO = "tareas.json"
 
-entrada = tk.Entry(ventana, width=40)
-entrada.insert(0, "Escribí tu tarea acá...")
-entrada.pack(pady=10)
 
-def agregar_tarea():
-    texto = entrada.get().strip()
+class GestorTareas:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Gestor de Tareas")
+        self.root.geometry("400x400")
 
-    if texto == "" or texto == "Escribí tu tarea acá...":
-        messagebox.showwarning(
-            "Atención",
-            "Por favor, escribí una tarea antes de agregar."
-        )
-        return
+        self.tareas = self.cargar_tareas()
 
-    tareas.append({"texto": texto, "completada": False})
+        self.crear_widgets()
+        self.actualizar_lista()
 
-    messagebox.showinfo(
-        "Tarea agregada",
-        f"La tarea '{texto}' fue agregada correctamente ✅"
-    )
+    # =========================
+    # ARCHIVO
+    # =========================
+    def guardar_tareas(self):
+        with open(ARCHIVO, "w", encoding="utf-8") as f:
+            json.dump(self.tareas, f, indent=4, ensure_ascii=False)
 
-    entrada.delete(0, tk.END)
-    actualizar_lista()
-    guardar_tareas()
+    def cargar_tareas(self):
+        if os.path.exists(ARCHIVO):
+            try:
+                with open(ARCHIVO, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                return []
+        return []
 
-def eliminar_tarea():
-    try:
-        index = lista.curselection()[0]
-        tarea = tareas[index]["texto"]
+    # =========================
+    # INTERFAZ
+    # =========================
+    def crear_widgets(self):
+        self.entrada = tk.Entry(self.root, width=40)
+        self.entrada.insert(0, "Escribí tu tarea acá...")
+        self.entrada.pack(pady=10)
 
-        confirmar = messagebox.askyesno(
-            "Confirmar",
-            f"¿Seguro que querés eliminar la tarea:\n\n'{tarea}'?"
-        )
+        self.entrada.bind("<FocusIn>", self.limpiar_placeholder)
+        self.entrada.bind("<FocusOut>", self.restaurar_placeholder)
 
-        if confirmar:
-            tareas.pop(index)
-            actualizar_lista()
-            guardar_tareas()
-            messagebox.showinfo(
-                "Eliminada",
-                "La tarea fue eliminada correctamente."
-            )
-    except IndexError:
-        messagebox.showwarning(
-            "Atención",
-            "Primero seleccioná una tarea."
-        )
+        tk.Button(self.root, text="Agregar tarea", command=self.agregar_tarea).pack()
+        tk.Button(self.root, text="Marcar / Desmarcar", command=self.completar_tarea).pack(pady=5)
+        tk.Button(self.root, text="Eliminar tarea", command=self.eliminar_tarea).pack()
 
-def completar_tarea():
-    try:
-        index = lista.curselection()[0]
-        tareas[index]["completada"] = True
-        actualizar_lista()
-        guardar_tareas()
+        self.lista = tk.Listbox(self.root, width=50)
+        self.lista.pack(pady=10)
 
-        messagebox.showinfo(
-            "Bien hecho 🎉",
-            "Marcaste una tarea como completada."
-        )
-    except IndexError:
-        messagebox.showwarning(
-            "Atención",
-            "Seleccioná una tarea para completarla."
-        )
+        self.lista.bind("<Double-Button-1>", lambda event: self.completar_tarea())
+
+    # =========================
+    # FUNCIONES
+    # =========================
+    def actualizar_lista(self):
+        self.lista.delete(0, tk.END)
+        for tarea in self.tareas:
+            estado = "✔" if tarea["completada"] else "✗"
+            self.lista.insert(tk.END, f"{estado} {tarea['texto']}")
+
+    def agregar_tarea(self):
+        texto = self.entrada.get().strip()
+
+        if texto == "" or texto == "Escribí tu tarea acá...":
+            messagebox.showwarning("Atención", "Escribí una tarea válida.")
+            return
+
+        self.tareas.append({"texto": texto, "completada": False})
+        self.guardar_tareas()
+        self.actualizar_lista()
+        self.entrada.delete(0, tk.END)
+
+    def eliminar_tarea(self):
+        try:
+            index = self.lista.curselection()[0]
+            tarea = self.tareas[index]["texto"]
+
+            if messagebox.askyesno("Confirmar", f"¿Eliminar '{tarea}'?"):
+                self.tareas.pop(index)
+                self.guardar_tareas()
+                self.actualizar_lista()
+
+        except IndexError:
+            messagebox.showwarning("Atención", "Seleccioná una tarea.")
+
+    def completar_tarea(self):
+        try:
+            index = self.lista.curselection()[0]
+            self.tareas[index]["completada"] = not self.tareas[index]["completada"]
+            self.guardar_tareas()
+            self.actualizar_lista()
+
+        except IndexError:
+            messagebox.showwarning("Atención", "Seleccioná una tarea.")
+
+    # =========================
+    # PLACEHOLDER
+    # =========================
+    def limpiar_placeholder(self, event):
+        if self.entrada.get() == "Escribí tu tarea acá...":
+            self.entrada.delete(0, tk.END)
+
+    def restaurar_placeholder(self, event):
+        if self.entrada.get().strip() == "":
+            self.entrada.insert(0, "Escribí tu tarea acá...")
+
+
+# =========================
+# MAIN
+# =========================
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = GestorTareas(root)
+    root.mainloop()
