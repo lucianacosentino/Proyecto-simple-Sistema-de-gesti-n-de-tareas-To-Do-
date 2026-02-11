@@ -18,7 +18,7 @@ class GestorTareas:
         self.root.configure(bg="#5F94DA")
 
         style = ttk.Style()
-        style.theme_use("clam")
+        style.theme_use("classic")
 
         style.configure("TFrame", background="#5F94DA")
         style.configure("TLabel", background="#5F94DA", foreground="white")
